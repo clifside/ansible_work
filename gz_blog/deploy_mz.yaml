@@ -1,12 +1,38 @@
 ---
 - hosts: do
-  remote_user: root
-
+#  remote_user: root
+  vars:
+    django_dir: /home/{{ ansible_user }}/www/gz_blog_py/gz_blog_mz
+    wsgi_server_root: /etc/mod_wsgi-express-80
   tasks:
+  - name: stop httpd
+    service:
+    name: httpd
+    state: stopped
   - name: pull branch master
     git:
-      repo={{ repo_url }}/{{ repo }}.git
-      dest={{ repo_dir }}
+      repo={{ repo_url }}/gz_blog_py.git
+      dest=/home/{{ ansible_user }}/www/gz_blog_py
+#  - name: make it executable
+#    command: chmod 755
+#  - name: dj_syncdb
+#    django_manage:
+#      command: syncdb
+#      app_path: "{{ django_dir }}"
+
+  - name: dj_collectstatic
+    django_manage:
+        command: collectstatic
+        app_path: "{{ django_dir }}"
+  - name: setup mod_wsgi
+    shell: python manage.py runmodwsgi --setup-only --port=80 --user centos --group centos --server-root={{ wsgi_server_root }} chdir={{ django_dir }}
+    become: yes
+    become_method: sudo
+  - name: start apache
+    shell: "{{ wsgi_server_root }}/apachectl start"
+    become: yes
+    become_method: sudo
+
 
 
 #- hosts: databases
